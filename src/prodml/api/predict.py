@@ -6,9 +6,9 @@ from ..data_schema import Customer
 
 log = structlog.get_logger(__name__)
 
-predict_router = APIRouter(prefix="/predict", tags=["Predictions"])
+predict_router = APIRouter(prefix="", tags=["Predictions"])
 
-@predict_router.post("/churn")
+@predict_router.post("/predict")
 def predict_churn(customer: Customer, request: Request):
     model = request.app.state.model
     if model is None:
@@ -25,7 +25,7 @@ def predict_churn(customer: Customer, request: Request):
     return JSONResponse(status_code=status.HTTP_200_OK, content=prediction)
 
 
-@predict_router.post("/batch")
+@predict_router.post("/predict/batch")
 def predict_churn_batch(customers: list[Customer], request: Request):
     model = request.app.state.model
     if model is None:

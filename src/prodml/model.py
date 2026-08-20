@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from .config import get_settings
 import structlog
 import xgboost as xgb
+from .helpers import timed
 
 settings = get_settings()
 log = structlog.get_logger(__name__)
@@ -24,7 +25,7 @@ class ChurnPredictor(ModelBase):
             self.dv, self.model = pickle.load(f_in)
 
         log.info("model_loaded", path=settings.MODEL_FILE, threshold=settings.CHURN_THRESHOLD)
-
+    @timed
     def predict(self, X: dict) -> dict:
         Xt = self.dv.transform([X])
         dmatrix = xgb.DMatrix(Xt,
@@ -36,7 +37,7 @@ class ChurnPredictor(ModelBase):
             'churn': bool(probability >= self.threshold),
             'threshold': self.threshold,
         }
-    
+    @timed
     def predict_batch(self, X: list[dict]) -> list[dict]:
         Xt = self.dv.transform(X)
         dmatrix = xgb.DMatrix(Xt,

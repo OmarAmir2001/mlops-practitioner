@@ -17,10 +17,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest","pytest-cov","ruff","black","mypy","httpx","pre-commit"]
+dev = ["pytest","pytest-cov","ruff","black","mypy","httpx2","pre-commit"]
 
 [project.scripts]
-prodml-train = "prodml.train:main"
+prodml-serve = "prodml.run:main"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/prodml --cov-fail-under=70"
 
 [build-system]
 requires = ["setuptools>=68"]
