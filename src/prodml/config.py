@@ -10,8 +10,7 @@ class Settings(BaseSettings):
     MODEL_FILE: str
     CHURN_THRESHOLD: float = 0.5
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 def get_settings() -> Settings:
