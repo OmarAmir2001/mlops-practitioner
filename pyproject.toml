@@ -1,0 +1,30 @@
+[project]
+name = "prodml"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "scikit-learn",
+    "pandas",
+    "pyarrow",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "pydantic-settings",
+    "xgboost>=3.4.1",
+    "structlog>=26.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest","pytest-cov","ruff","black","mypy","httpx2","pre-commit"]
+
+[project.scripts]
+prodml-serve = "prodml.run:main"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/prodml --cov-fail-under=70"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
