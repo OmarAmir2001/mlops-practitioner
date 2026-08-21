@@ -1,0 +1,8 @@
+.venv
+.env
+.git
+src/prodml.egg-info/
+.pytest_cache/
+*.pyc
+.env.example
+tests/
