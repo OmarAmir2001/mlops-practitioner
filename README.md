@@ -117,7 +117,7 @@ mlops-practitioner/
   startup if a required setting is missing, rather than falling back to a
   silent default.
 - **Model artifact ownership:** the pickle and metadata JSON are committed
-  directly to this repo (not yet DVC-tracked — that arrives in Module 2).
+  directly to this repo.
   `.pkl` files execute arbitrary code on load; only load ones you trust.
 - **Docker:** the image never bakes in `.env` — secrets/config are always
   supplied at `docker run`/`docker compose up` time via `--env-file` or
@@ -125,7 +125,7 @@ mlops-practitioner/
 
 ## Status
 
-Module 1 (Mini Project 1) — packaging, logging, serialization, API, testing,
+Module 1 (Mini Project 1) — packaging, logging, API, testing,
 and Docker are complete. See `reports/module-1.md` for measured numbers
 (MAE, latency comparisons, image sizes, coverage) and the maturity
 self-assessment.
