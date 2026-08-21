@@ -1,7 +1,7 @@
 # api/schema.py
 from typing import Literal
 from pydantic import BaseModel, Field
-
+"""Pydantic schema for customer data."""
 
 class Customer(BaseModel):
     gender: Literal['female', 'male']

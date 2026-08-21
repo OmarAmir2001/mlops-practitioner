@@ -6,6 +6,8 @@ import json
 import time
 from functools import wraps
 
+"""Helper functions."""
+
 settings = get_settings()
 log = structlog.get_logger(__name__)
 
