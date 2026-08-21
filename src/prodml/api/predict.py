@@ -10,6 +10,7 @@ predict_router = APIRouter(prefix="", tags=["Predictions"])
 
 @predict_router.post("/predict")
 def predict_churn(customer: Customer, request: Request):
+    """Single prediction endpoint."""
     model = request.app.state.model
     if model is None:
         log.error("predict_churn_failed", reason="model_not_loaded")
@@ -27,6 +28,7 @@ def predict_churn(customer: Customer, request: Request):
 
 @predict_router.post("/predict/batch")
 def predict_churn_batch(customers: list[Customer], request: Request):
+    """Batch prediction endpoint."""
     model = request.app.state.model
     if model is None:
         log.error("predict_churn_failed", reason="model_not_loaded")

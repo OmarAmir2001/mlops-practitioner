@@ -10,6 +10,7 @@ base_router = APIRouter(prefix="", tags=["Base Routes"])
 
 @base_router.get("/health")
 def health_check(request: Request, app_settings: Settings = Depends(get_settings)):
+    """Health check endpoint."""
     model = request.app.state.model
 
     if model is None:
@@ -26,6 +27,7 @@ def health_check(request: Request, app_settings: Settings = Depends(get_settings
 
 @base_router.get("/metadata")
 def metadata_check(request: Request, app_settings: Settings = Depends(get_settings)):
+    """Metadata check endpoint."""
     model = request.app.state.model
     metadata = request.app.state.metadata
 
