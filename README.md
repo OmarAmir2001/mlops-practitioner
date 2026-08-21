@@ -106,26 +106,3 @@ mlops-practitioner/
     ├── test_api.py                # full HTTP request/response, real model via lifespan
     └── test_features.py           # Customer schema ↔ dv feature-name contract
 ```
-
-## Design notes
-
-- **Model format:** the trained model is a raw XGBoost `Booster` (not the
-  sklearn wrapper), so inference goes through `xgb.DMatrix` with explicit
-  `feature_names` rather than `predict_proba`. See `model.py`.
-- **Configuration:** all paths, thresholds, and the port are read from `.env`
-  via `pydantic-settings` — nothing is hardcoded, and the app fails loudly at
-  startup if a required setting is missing, rather than falling back to a
-  silent default.
-- **Model artifact ownership:** the pickle and metadata JSON are committed
-  directly to this repo.
-  `.pkl` files execute arbitrary code on load; only load ones you trust.
-- **Docker:** the image never bakes in `.env` — secrets/config are always
-  supplied at `docker run`/`docker compose up` time via `--env-file` or
-  `env_file:`, never `COPY`'d into a layer.
-
-## Status
-
-Module 1 (Mini Project 1) — packaging, logging, API, testing,
-and Docker are complete. See `reports/module-1.md` for measured numbers
-(MAE, latency comparisons, image sizes, coverage) and the maturity
-self-assessment.
