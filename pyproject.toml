@@ -14,10 +14,13 @@ dependencies = [
     "pydantic-settings",
     "xgboost>=3.4.1",
     "structlog>=26.1.0",
+    "mlflow>=3.15.2",
+    "psycopg2-binary>=2.9.12",
+    "boto3>=1.43.80",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest","pytest-cov","ruff","black","mypy","httpx2","pre-commit"]
+dev = ["pytest","pytest-cov","ruff","black","mypy","httpx2","pre-commit","mlflow","torch","optuna"]
 
 [project.scripts]
 prodml-serve = "prodml.run:main"
