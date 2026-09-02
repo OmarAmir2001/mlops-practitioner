@@ -1,14 +1,12 @@
-import pickle
+import pandas as pd
 from abc import ABC, abstractmethod
-from .config import get_settings
+from .config import get_settings, apply_aws_env
 import structlog
-import xgboost as xgb
+import mlflow.pyfunc
 from .helpers import timed
 
 settings = get_settings()
 log = structlog.get_logger(__name__)
-
-
 
 
 class ModelBase(ABC):
@@ -22,38 +20,44 @@ class ModelBase(ABC):
 class ChurnPredictor(ModelBase):
     def __init__(self, threshold: float = settings.CHURN_THRESHOLD) -> None:
         self.threshold = threshold
-        self.threshold = threshold
+        apply_aws_env()
+        mlflow.set_tracking_uri(settings.MLFLOW_TRACKING_URI)
+        self.model_uri = f"models:/{settings.MODEL_NAME}@production"
+        self.model = mlflow.pyfunc.load_model(self.model_uri)
+        log.info("model_loaded", uri=self.model_uri, threshold=threshold)
 
-        with open(settings.MODEL_FILE, 'rb') as f_in:
-            self.dv, self.model = pickle.load(f_in)
+    def get_metadata(self) -> dict:
+        meta = self.model.metadata
+        return {
+            "model_name": settings.MODEL_NAME,
+            "model_uri": self.model_uri,
+            "run_id": meta.run_id,
+            "trained_at": str(meta.utc_time_created),
+            "model_size_bytes": meta.model_size_bytes,
+            "framework": self.model.unwrap_python_model().framework,
+        }
 
-        log.info("model_loaded", path=settings.MODEL_FILE, threshold=settings.CHURN_THRESHOLD)
     @timed
     def predict(self, X: dict) -> dict:
         """Single prediction."""
-        Xt = self.dv.transform([X])
-        dmatrix = xgb.DMatrix(Xt,
-                               feature_names=self.dv.get_feature_names_out().tolist())
-        probability = float(self.model.predict(dmatrix)[0])
-
+        df = pd.DataFrame([X])
+        probability = float(self.model.predict(df)[0])
         return {
             'churn_probability': round(probability, 4),
             'churn': bool(probability >= self.threshold),
             'threshold': self.threshold,
         }
+
     @timed
     def predict_batch(self, X: list[dict]) -> list[dict]:
         """Batch prediction."""
-        Xt = self.dv.transform(X)
-        dmatrix = xgb.DMatrix(Xt,
-                               feature_names=self.dv.get_feature_names_out().tolist())
-        probabilities = self.model.predict(dmatrix)
-        results = [
-                    {
-                        'churn_probability': round(float(p), 4),
-                        'churn': bool(p >= self.threshold),
-                        'threshold': self.threshold,
-                    }
-                    for p in probabilities
-                ]
-        return results
+        df = pd.DataFrame(X)
+        probabilities = self.model.predict(df)
+        return [
+            {
+                'churn_probability': round(float(p), 4),
+                'churn': bool(p >= self.threshold),
+                'threshold': self.threshold,
+            }
+            for p in probabilities
+        ]

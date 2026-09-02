@@ -29,3 +29,11 @@ models:
     learning_rate: 0.001
     epochs: 100
     batch_size: 32
+
+sweep:
+  n_trials: 10
+  xgboost:
+    max_depth: [3, 10]
+    learning_rate: [0.01, 0.3]
+    n_estimators: [50, 300]
+    subsample: [0.6, 1.0]

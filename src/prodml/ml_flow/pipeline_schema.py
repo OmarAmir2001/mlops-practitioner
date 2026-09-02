@@ -14,6 +14,17 @@ class CVSettings(BaseModel):
     cv_folds: int
     scoring_metric: str
 
+class SweepRanges(BaseModel):
+    max_depth: tuple[int, int]
+    learning_rate: tuple[float, float]
+    n_estimators: tuple[int, int]
+    subsample: tuple[float, float]
+
+class SweepSettings(BaseModel):
+    n_trials: int
+    xgboost: SweepRanges
+
+
 # 3. The Combined Configuration Schema (Env + YAML)
 class CompleteMLConfig(BaseModel):
     # Variables coming from the .env file
@@ -23,6 +34,7 @@ class CompleteMLConfig(BaseModel):
     active_model: Literal["logistic", "xgboost", "random_forest", "mlp"]
     cross_validation: CVSettings
     models: Dict[str, Dict[str, Any]]
+    sweep: SweepSettings
 
 # 4. Loader function that merges them
 def load_ml_pipeline() -> CompleteMLConfig:
@@ -31,7 +43,8 @@ def load_ml_pipeline() -> CompleteMLConfig:
     yaml_path = Path(yaml_path_str)
     
     if not yaml_path.exists():
-        raise log.error("yaml_path_not_found", path=yaml_path_str)
+        log.error("yaml_path_not_found", path=yaml_path_str)
+        raise FileNotFoundError(f"ML config not found: {yaml_path_str}")
         
     with open(yaml_path, "r") as f:
         yaml_data = yaml.safe_load(f)
