@@ -1,5 +1,4 @@
 import mlflow
-import os
 from prodml.config import get_settings, apply_aws_env
 from prodml.data import prepare, split, featurize
 from prodml.ml_flow.pipeline_schema import load_ml_pipeline
@@ -18,16 +17,21 @@ log = structlog.get_logger(__name__)
 
 settings = get_settings()
 ml_config=load_ml_pipeline()
-settings = get_settings()
 apply_aws_env()
 
-def main():
-    mlflow.set_tracking_uri(ml_config.tracking_uri)
-    mlflow.set_experiment("churn-prediction")
-
+def load_data():
+    """Load and featurize from scratch. Returns the 8-tuple featurize() produces."""
     df = prepare(settings.DATA_PATH)
     df_train, df_val, df_test = split(df)
-    X_train, X_val, X_test, y_train, y_val, y_test, dv, scaler = featurize(df_train, df_val, df_test)
+    return featurize(df_train, df_val, df_test)
+
+
+def run_training(bundle):
+    """Train all families, pick a champion, register and maybe promote."""
+    X_train, X_val, X_test, y_train, y_val, y_test, dv, scaler = bundle
+
+    mlflow.set_tracking_uri(ml_config.tracking_uri)
+    mlflow.set_experiment("churn-prediction")
 
     results = [
         train_logistic_regression(X_train, y_train, X_val, y_val),
@@ -37,13 +41,20 @@ def main():
     ]
 
     champion = max(results, key=lambda r: r[2])
-    model, framework, roc_auc,f1, run_id = champion
+    model, framework, roc_auc, f1, run_id = champion
     log.info("champion_selected", framework=framework, roc_auc=roc_auc, f1=f1, run_id=run_id)
 
-    with mlflow.start_run(run_id=run_id):        # reopen the champion's run
+    with mlflow.start_run(run_id=run_id):
         log_wrapped_model(model, framework, dv, scaler)
+
     promoted = promote_if_better(run_id)
     log.info("promotion_result", promoted=promoted, framework=framework, roc_auc=roc_auc)
+
+    return {"framework": framework, "roc_auc": roc_auc, "f1": f1, "run_id": run_id, "promoted": promoted}
+
+
+def main():
+    run_training(load_data())
 
 
 def train_logistic_regression(X_train, y_train, X_val, y_val):

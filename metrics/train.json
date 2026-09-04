@@ -1,0 +1,7 @@
+{
+  "framework": "logistic_regression",
+  "roc_auc": 0.8574799339418261,
+  "f1": 0.6298342541436464,
+  "run_id": "7033f80f666b4eee8ec731f6d8becdad",
+  "promoted": false
+}
