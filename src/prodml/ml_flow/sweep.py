@@ -9,6 +9,7 @@ from ..helpers import model_size_mb
 from xgboost import plot_importance
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
+from ..helpers import get_data_version
 
 
 log = structlog.get_logger(__name__)
@@ -67,6 +68,7 @@ def sweep_xgboost(sweep_config, X_train, y_train, X_val, y_val, threshold):
         mlflow.log_metric("train_duration_sec", t["elapsed"])
         mlflow.log_metric("model_size_mb", model_size_mb(model))
         mlflow.xgboost.log_model(model, name="model")
-        mlflow.set_tags({"framework": "xgboost", "author": "omar", "swept": "true", "git_commit": get_git_commit()})
+        mlflow.set_tags({"framework": "xgboost", "author": "omar", "swept": "true", "git_commit": get_git_commit(),
+                         "data_version": get_data_version()})
 
         return model, "xgboost", roc_auc, f1, run.info.run_id

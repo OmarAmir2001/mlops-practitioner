@@ -65,12 +65,12 @@ stages:
       size: 710
     - path: src/prodml/ml_flow/sweep.py
       hash: md5
-      md5: 61bfff2b8f4b8facb9db36b7227e9870
-      size: 2829
+      md5: fc0a593b366fd877869bc7a778cf6e9f
+      size: 2929
     - path: src/prodml/ml_flow/train.py
       hash: md5
-      md5: ff284610e2b49dd8fd825ae49bddc7cc
-      size: 7839
+      md5: 6b87e3a72b19dcc173bb5c595889564e
+      size: 8061
     - path: src/prodml/registry.py
       hash: md5
       md5: 0ec44c5a135baeda2175162c99667a87
@@ -78,7 +78,7 @@ stages:
     outs:
     - path: metrics/train.json
       hash: md5
-      md5: d1297fc2603825c6f7af06312148b8a8
+      md5: ce28b5eda0f04c2f0f7a5bfefaf123d9
       size: 170
   evaluate:
     cmd: python pipelines/run_evaluate.py
@@ -89,7 +89,7 @@ stages:
       size: 42267
     - path: metrics/train.json
       hash: md5
-      md5: d1297fc2603825c6f7af06312148b8a8
+      md5: ce28b5eda0f04c2f0f7a5bfefaf123d9
       size: 170
     - path: pipelines/run_evaluate.py
       hash: md5

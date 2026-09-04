@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
 from xgboost import plot_importance
 from prodml.registry import promote_if_better
+from ..helpers import get_data_version
 
 log = structlog.get_logger(__name__)
 
@@ -92,7 +93,8 @@ def train_logistic_regression(X_train, y_train, X_val, y_val):
         })
         
         mlflow.sklearn.log_model(model, name="model")
-        mlflow.set_tags({"framework": "logistic_regression", "author": "omar","git_commit": get_git_commit()})
+        mlflow.set_tags({"framework": "logistic_regression", "author": "omar","git_commit": get_git_commit(),
+                         "data_version": get_data_version()})
         return model , "logistic_regression",roc_auc , f1 , run.info.run_id
 
 def train_xgboost(X_train, y_train, X_val, y_val):
@@ -134,7 +136,8 @@ def train_xgboost(X_train, y_train, X_val, y_val):
             "model_size_mb": model_size_mb(model),
         })
         mlflow.xgboost.log_model(model, name="model")
-        mlflow.set_tags({"framework": "xgboost", "author": "omar","git_commit": get_git_commit()})
+        mlflow.set_tags({"framework": "xgboost", "author": "omar","git_commit": get_git_commit(),
+                         "data_version": get_data_version()})
         return model , "xgboost",roc_auc , f1 , run.info.run_id
 
 
@@ -205,7 +208,8 @@ def train_mlp(X_train, y_train, X_val, y_val):
         })
 
         mlflow.pytorch.log_model(model, name="model", input_example=X_train_t[:5].numpy())
-        mlflow.set_tags({"framework": "pytorch", "author": "omar","git_commit": get_git_commit()})
+        mlflow.set_tags({"framework": "pytorch", "author": "omar","git_commit": get_git_commit(),
+                         "data_version": get_data_version()})
         return model , "pytorch",roc_auc , f1 , run.info.run_id
 
 if __name__ == "__main__":

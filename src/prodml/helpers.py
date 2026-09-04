@@ -6,6 +6,7 @@ from functools import wraps
 from git import Repo
 from contextlib import contextmanager
 import os, pickle, tempfile
+import yaml
 
 """Helper functions."""
 
@@ -48,3 +49,10 @@ def model_size_mb(model) -> float:
         pickle.dump(model, tmp)
         tmp.flush()
         return os.path.getsize(tmp.name) / (1024 * 1024)
+
+
+
+def get_data_version(dvc_file: str = "data/WA_Fn-UseC_-Telco-Customer-Churn.csv.dvc") -> str:
+    """Read the DVC-tracked hash of the input dataset."""
+    with open(dvc_file) as f:
+        return yaml.safe_load(f)["outs"][0]["md5"]
