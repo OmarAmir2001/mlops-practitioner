@@ -11,8 +11,8 @@ from prodml.registry import promote_if_better
 
 from ..helpers import get_data_version, model_size_mb, timer
 from ..helpers import get_git_commit_hash as get_git_commit
-from .wrapper import log_wrapped_model
 from .sweep import sweep_xgboost
+from .wrapper import log_wrapped_model
 
 log = structlog.get_logger(__name__)
 
@@ -30,7 +30,7 @@ def load_data():
 
 def run_training(bundle):
     """Train all families, pick a champion, register and maybe promote."""
-    X_train, X_val, X_test, y_train, y_val, y_test, dv, scaler = bundle
+    X_train, X_val, _X_test, y_train, y_val, _y_test, dv, scaler = bundle
 
     mlflow.set_tracking_uri(ml_config.tracking_uri)
     mlflow.set_experiment("churn-prediction")
