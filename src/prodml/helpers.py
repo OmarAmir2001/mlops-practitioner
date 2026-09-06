@@ -1,18 +1,20 @@
+import os
 import pickle
-from .config import get_settings
-import structlog
+import tempfile
 import time
-from functools import wraps
-from git import Repo
 from contextlib import contextmanager
-import os, pickle, tempfile
+from functools import wraps
+
+import structlog
 import yaml
+from git import Repo
+
+from .config import get_settings
 
 """Helper functions."""
 
 settings = get_settings()
 log = structlog.get_logger(__name__)
-
 
 
 def timed(func):
@@ -23,6 +25,7 @@ def timed(func):
         elapsed_ms = (time.perf_counter() - start) * 1000
         log.info("timed_call", function=func.__name__, elapsed_ms=round(elapsed_ms, 2))
         return result
+
     return wrapper
 
 
@@ -41,7 +44,7 @@ def timer():
         yield holder
     finally:
         holder["elapsed"] = time.perf_counter() - start
-    
+
 
 def model_size_mb(model) -> float:
     """Serialized size of a model in megabytes."""
@@ -51,8 +54,9 @@ def model_size_mb(model) -> float:
         return os.path.getsize(tmp.name) / (1024 * 1024)
 
 
-
-def get_data_version(dvc_file: str = "data/WA_Fn-UseC_-Telco-Customer-Churn.csv.dvc") -> str:
+def get_data_version(
+    dvc_file: str = "data/WA_Fn-UseC_-Telco-Customer-Churn.csv.dvc",
+) -> str:
     """Read the DVC-tracked hash of the input dataset."""
     with open(dvc_file) as f:
         return yaml.safe_load(f)["outs"][0]["md5"]

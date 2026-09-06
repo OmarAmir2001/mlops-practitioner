@@ -1,19 +1,24 @@
-import json, pickle
+import json
+import pickle
+
 import mlflow.pyfunc
 import numpy as np
 import pandas as pd
-import xgboost as xgb
+import structlog
 import torch
+import xgboost as xgb
+
 from prodml.data import CATEGORICAL, NUMERICAL
 
-import structlog
 log = structlog.get_logger(__name__)
 
 
 class SklearnAdapter:
     """Covers LogisticRegression and XGBClassifier — both expose the sklearn API."""
+
     def __init__(self, model):
         self.model = model
+
     def predict_proba(self, X) -> np.ndarray:
         return self.model.predict_proba(X)[:, 1]
 
@@ -34,14 +39,17 @@ def _load_sklearn(path):
     with open(path, "rb") as f:
         return SklearnAdapter(pickle.load(f))
 
+
 def _load_xgboost(path):
     model = xgb.XGBClassifier()
     model.load_model(path)
     return SklearnAdapter(model)
 
+
 def _load_torch(path):
     model = torch.load(path, weights_only=False)
     return TorchAdapter(model)
+
 
 LOADERS = {
     "logistic_regression": _load_sklearn,
@@ -49,12 +57,13 @@ LOADERS = {
     "pytorch": _load_torch,
 }
 
+
 class ChurnModelWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
         with open(context.artifacts["metadata"]) as f:
             meta = json.load(f)
 
-        self.framework = meta["framework"]       
+        self.framework = meta["framework"]
         self.pipeline = LOADERS[self.framework](context.artifacts["model"])
 
         with open(context.artifacts["dv"], "rb") as f:
@@ -72,27 +81,32 @@ class ChurnModelWrapper(mlflow.pyfunc.PythonModel):
 
 # SAVERS
 
+
 def _save_sklearn(model, dirpath) -> str:
     path = f"{dirpath}/model.pkl"
     with open(path, "wb") as f:
         pickle.dump(model, f)
     return path
 
+
 def _save_xgboost(model, dirpath) -> str:
     path = f"{dirpath}/model.json"
     model.save_model(path)
     return path
 
+
 def _save_torch(model, dirpath) -> str:
-    path=f"{dirpath}/model.pt"
+    path = f"{dirpath}/model.pt"
     torch.save(model, path)
     return path
+
 
 SAVERS = {
     "logistic_regression": _save_sklearn,
     "xgboost": _save_xgboost,
     "pytorch": _save_torch,
 }
+
 
 def log_wrapped_model(model, framework: str, dv, scaler):
     import tempfile

@@ -1,7 +1,8 @@
+import structlog
 from mlflow import MlflowClient
 from mlflow.exceptions import RestException
+
 from prodml.config import get_settings
-import structlog
 
 log = structlog.get_logger(__name__)
 client = MlflowClient(tracking_uri=get_settings().MLFLOW_TRACKING_URI)
@@ -32,15 +33,30 @@ def promote_if_better(
 
     if current is None:
         client.set_registered_model_alias(model_name, PRODUCTION_ALIAS, new_version)
-        log.info("promoted_first_production", version=new_version, metric=metric, value=candidate_metric)
+        log.info(
+            "promoted_first_production",
+            version=new_version,
+            metric=metric,
+            value=candidate_metric,
+        )
         return True
 
     prod_metric = client.get_run(current.run_id).data.metrics[metric]
 
-    if candidate_metric > prod_metric:   # higher is better — reverse for log_loss
+    if candidate_metric > prod_metric:  # higher is better — reverse for log_loss
         client.set_registered_model_alias(model_name, PRODUCTION_ALIAS, new_version)
-        log.info("promoted", version=new_version, candidate=candidate_metric, previous=prod_metric)
+        log.info(
+            "promoted",
+            version=new_version,
+            candidate=candidate_metric,
+            previous=prod_metric,
+        )
         return True
 
-    log.info("not_promoted", version=new_version, candidate=candidate_metric, production=prod_metric)
+    log.info(
+        "not_promoted",
+        version=new_version,
+        candidate=candidate_metric,
+        production=prod_metric,
+    )
     return False

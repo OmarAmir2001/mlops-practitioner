@@ -24,7 +24,7 @@ stages:
       - pipelines/run_train.py
       - src/prodml/ml_flow/train.py
       - src/prodml/ml_flow/sweep.py
-      - src/prodml/ml_flow/ChurnModelWrapper.py
+      - src/prodml/ml_flow/wrapper.py
       - src/prodml/registry.py
       - src/prodml/ml_flow/pipeline_config.yaml
       - data/processed/features.pkl

@@ -1,8 +1,10 @@
-import pandas as pd
 from abc import ABC, abstractmethod
-from .config import get_settings, apply_aws_env
-import structlog
+
 import mlflow.pyfunc
+import pandas as pd
+import structlog
+
+from .config import apply_aws_env, get_settings
 from .helpers import timed
 
 settings = get_settings()
@@ -11,6 +13,7 @@ log = structlog.get_logger(__name__)
 
 class ModelBase(ABC):
     """Abstract base class for models."""
+
     @abstractmethod
     def predict(self, X: dict) -> dict: ...
     @abstractmethod
@@ -43,9 +46,9 @@ class ChurnPredictor(ModelBase):
         df = pd.DataFrame([X])
         probability = float(self.model.predict(df)[0])
         return {
-            'churn_probability': round(probability, 4),
-            'churn': bool(probability >= self.threshold),
-            'threshold': self.threshold,
+            "churn_probability": round(probability, 4),
+            "churn": bool(probability >= self.threshold),
+            "threshold": self.threshold,
         }
 
     @timed
@@ -55,9 +58,9 @@ class ChurnPredictor(ModelBase):
         probabilities = self.model.predict(df)
         return [
             {
-                'churn_probability': round(float(p), 4),
-                'churn': bool(p >= self.threshold),
-                'threshold': self.threshold,
+                "churn_probability": round(float(p), 4),
+                "churn": bool(p >= self.threshold),
+                "threshold": self.threshold,
             }
             for p in probabilities
         ]

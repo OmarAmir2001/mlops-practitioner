@@ -1,7 +1,9 @@
 """DVC stage: raw CSV -> cleaned parquet."""
+
+import structlog
+
 from prodml.config import get_settings
 from prodml.data import prepare
-import structlog
 
 log = structlog.get_logger(__name__)
 

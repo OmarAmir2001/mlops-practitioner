@@ -1,9 +1,13 @@
 """DVC stage: cleaned parquet -> pickled features + fitted transformers."""
-import pickle
-import pandas as pd
-from prodml.data import split, featurize
-import structlog
+
 import pathlib
+import pickle
+
+import pandas as pd
+import structlog
+
+from prodml.data import featurize, split
+
 Path = pathlib.Path
 
 log = structlog.get_logger(__name__)
@@ -25,6 +29,7 @@ def main():
     df_test.to_parquet(TEST_RAW, index=False)
 
     log.info("featurize_done", train_shape=bundle[0].shape, test_rows=len(df_test))
+
 
 if __name__ == "__main__":
     main()

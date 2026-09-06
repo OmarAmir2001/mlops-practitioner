@@ -1,7 +1,8 @@
-from ..config import get_settings, Settings
+import structlog
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
-import structlog
+
+from ..config import Settings, get_settings
 
 log = structlog.get_logger(__name__)
 
@@ -21,9 +22,15 @@ def health_check(request: Request, app_settings: Settings = Depends(get_settings
         )
 
     log.info("health_check_ok")
-    return JSONResponse( status_code= status.HTTP_200_OK ,
-                        content={"status": "healthy", "app_name": app_settings.APP_NAME,
-                                                    "app_version": app_settings.APP_VERSION})
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "healthy",
+            "app_name": app_settings.APP_NAME,
+            "app_version": app_settings.APP_VERSION,
+        },
+    )
+
 
 @base_router.get("/metadata")
 def metadata_check(request: Request, app_settings: Settings = Depends(get_settings)):
@@ -38,6 +45,3 @@ def metadata_check(request: Request, app_settings: Settings = Depends(get_settin
         )
 
     return JSONResponse(status_code=status.HTTP_200_OK, content=model.get_metadata())
-
-    
-    

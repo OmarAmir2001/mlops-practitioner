@@ -18,16 +18,35 @@ dependencies = [
     "psycopg2-binary>=2.9.12",
     "boto3>=1.43.80",
     "gitpython>=3.1.60",
+    "torch",
+    "optuna",
+    "matplotlib",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest","pytest-cov","ruff","black","mypy","httpx2","pre-commit","mlflow","torch","optuna"]
+dev = ["pytest", "pytest-cov", "ruff", "black", "mypy", "httpx", "pre-commit"]
 
 [project.scripts]
 prodml-serve = "prodml.run:main"
 
 [tool.pytest.ini_options]
 addopts = "--cov=src/prodml --cov-fail-under=70"
+
+[tool.coverage.run]
+omit = [
+    "src/prodml/ml_flow/train.py",
+    "src/prodml/ml_flow/sweep.py",
+    "src/prodml/run.py",
+]
+
+[tool.black]
+target-version = ["py314"]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint.per-file-ignores]
+"src/prodml/api/*.py" = ["B008"]
 
 [build-system]
 requires = ["setuptools>=68"]

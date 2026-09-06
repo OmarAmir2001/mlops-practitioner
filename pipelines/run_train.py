@@ -1,8 +1,11 @@
 """DVC stage: features -> trained models, registered champion."""
-import pickle
+
 import json
-from prodml.ml_flow.train import run_training
+import pickle
+
 import structlog
+
+from prodml.ml_flow.train import run_training
 
 log = structlog.get_logger(__name__)
 

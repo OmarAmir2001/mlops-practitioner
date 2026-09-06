@@ -1,11 +1,14 @@
 """DVC stage: score the production model on the held-out test set."""
+
 import json
 from pathlib import Path
+
 import pandas as pd
-from sklearn.metrics import roc_auc_score, f1_score, log_loss
-from prodml.model import ChurnPredictor
-from prodml.config import get_settings
 import structlog
+from sklearn.metrics import f1_score, log_loss, roc_auc_score
+
+from prodml.config import get_settings
+from prodml.model import ChurnPredictor
 
 log = structlog.get_logger(__name__)
 settings = get_settings()
@@ -34,7 +37,9 @@ def main():
     with open(OUTPUT, "w") as f:
         json.dump(metrics, f, indent=2)
 
-    log.info("evaluate_done", **{k: v for k, v in metrics.items() if k.startswith("test_")})
+    log.info(
+        "evaluate_done", **{k: v for k, v in metrics.items() if k.startswith("test_")}
+    )
 
 
 if __name__ == "__main__":

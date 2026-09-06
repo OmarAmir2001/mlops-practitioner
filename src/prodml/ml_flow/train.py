@@ -1,24 +1,25 @@
-import mlflow
-from prodml.config import get_settings, apply_aws_env
-from prodml.data import prepare, split, featurize
-from prodml.ml_flow.pipeline_schema import load_ml_pipeline
-from .ChurnModelWrapper import log_wrapped_model
-import structlog
-from .sweep import sweep_xgboost
-from ..helpers import get_git_commit_hash as get_git_commit
-from ..helpers import timer
-from ..helpers import model_size_mb
 import matplotlib.pyplot as plt
+import mlflow
+import structlog
 from sklearn.metrics import ConfusionMatrixDisplay
 from xgboost import plot_importance
+
+from prodml.config import apply_aws_env, get_settings
+from prodml.data import featurize, prepare, split
+from prodml.ml_flow.pipeline_schema import load_ml_pipeline
 from prodml.registry import promote_if_better
-from ..helpers import get_data_version
+
+from ..helpers import get_data_version, model_size_mb, timer
+from ..helpers import get_git_commit_hash as get_git_commit
+from .wrapper import log_wrapped_model
+from .sweep import sweep_xgboost
 
 log = structlog.get_logger(__name__)
 
 settings = get_settings()
-ml_config=load_ml_pipeline()
+ml_config = load_ml_pipeline()
 apply_aws_env()
+
 
 def load_data():
     """Load and featurize from scratch. Returns the 8-tuple featurize() produces."""
@@ -38,20 +39,32 @@ def run_training(bundle):
         train_logistic_regression(X_train, y_train, X_val, y_val),
         train_xgboost(X_train, y_train, X_val, y_val),
         train_mlp(X_train, y_train, X_val, y_val),
-        sweep_xgboost(ml_config.sweep, X_train, y_train, X_val, y_val, settings.CHURN_THRESHOLD),
+        sweep_xgboost(
+            ml_config.sweep, X_train, y_train, X_val, y_val, settings.CHURN_THRESHOLD
+        ),
     ]
 
     champion = max(results, key=lambda r: r[2])
     model, framework, roc_auc, f1, run_id = champion
-    log.info("champion_selected", framework=framework, roc_auc=roc_auc, f1=f1, run_id=run_id)
+    log.info(
+        "champion_selected", framework=framework, roc_auc=roc_auc, f1=f1, run_id=run_id
+    )
 
     with mlflow.start_run(run_id=run_id):
         log_wrapped_model(model, framework, dv, scaler)
 
     promoted = promote_if_better(run_id)
-    log.info("promotion_result", promoted=promoted, framework=framework, roc_auc=roc_auc)
+    log.info(
+        "promotion_result", promoted=promoted, framework=framework, roc_auc=roc_auc
+    )
 
-    return {"framework": framework, "roc_auc": roc_auc, "f1": f1, "run_id": run_id, "promoted": promoted}
+    return {
+        "framework": framework,
+        "roc_auc": roc_auc,
+        "f1": f1,
+        "run_id": run_id,
+        "promoted": promoted,
+    }
 
 
 def main():
@@ -60,11 +73,10 @@ def main():
 
 def train_logistic_regression(X_train, y_train, X_val, y_val):
     from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import roc_auc_score, f1_score, log_loss
+    from sklearn.metrics import f1_score, log_loss, roc_auc_score
 
-    ml_config.active_model="logistic"
+    ml_config.active_model = "logistic"
     params = ml_config.models[ml_config.active_model]
-    
 
     with mlflow.start_run(run_name="lr-baseline") as run:
         mlflow.log_params(params)
@@ -74,7 +86,7 @@ def train_logistic_regression(X_train, y_train, X_val, y_val):
         with timer() as t:
             model.fit(X_train, y_train)
 
-        y_proba = model.predict_proba(X_val)[:, 1]   # probabilities, not labels
+        y_proba = model.predict_proba(X_val)[:, 1]  # probabilities, not labels
         y_pred = (y_proba >= settings.CHURN_THRESHOLD).astype(int)
         fig, ax = plt.subplots()
         ConfusionMatrixDisplay.from_predictions(y_val, y_pred, ax=ax)
@@ -83,25 +95,34 @@ def train_logistic_regression(X_train, y_train, X_val, y_val):
 
         roc_auc = roc_auc_score(y_val, y_proba)
         f1 = f1_score(y_val, y_pred)
-        
-        mlflow.log_metrics({
-            "roc_auc":roc_auc,
-            "f1": f1,
-            "log_loss": log_loss(y_val, y_proba),
-            "train_duration_sec": t["elapsed"],
-            "model_size_mb": model_size_mb(model),
-        })
-        
+
+        mlflow.log_metrics(
+            {
+                "roc_auc": roc_auc,
+                "f1": f1,
+                "log_loss": log_loss(y_val, y_proba),
+                "train_duration_sec": t["elapsed"],
+                "model_size_mb": model_size_mb(model),
+            }
+        )
+
         mlflow.sklearn.log_model(model, name="model")
-        mlflow.set_tags({"framework": "logistic_regression", "author": "omar","git_commit": get_git_commit(),
-                         "data_version": get_data_version()})
-        return model , "logistic_regression",roc_auc , f1 , run.info.run_id
+        mlflow.set_tags(
+            {
+                "framework": "logistic_regression",
+                "author": "omar",
+                "git_commit": get_git_commit(),
+                "data_version": get_data_version(),
+            }
+        )
+        return model, "logistic_regression", roc_auc, f1, run.info.run_id
+
 
 def train_xgboost(X_train, y_train, X_val, y_val):
+    from sklearn.metrics import f1_score, log_loss, roc_auc_score
     from xgboost import XGBClassifier
-    from sklearn.metrics import roc_auc_score, f1_score, log_loss
-    
-    ml_config.active_model="xgboost"
+
+    ml_config.active_model = "xgboost"
     params = ml_config.models[ml_config.active_model]
 
     with mlflow.start_run(run_name="xgboost-baseline") as run:
@@ -128,26 +149,33 @@ def train_xgboost(X_train, y_train, X_val, y_val):
         roc_auc = roc_auc_score(y_val, y_proba)
         f1 = f1_score(y_val, y_pred)
 
-        mlflow.log_metrics({
-            "roc_auc":roc_auc,
-            "f1": f1,
-            "log_loss": log_loss(y_val, y_proba),
-            "train_duration_sec": t["elapsed"],
-            "model_size_mb": model_size_mb(model),
-        })
+        mlflow.log_metrics(
+            {
+                "roc_auc": roc_auc,
+                "f1": f1,
+                "log_loss": log_loss(y_val, y_proba),
+                "train_duration_sec": t["elapsed"],
+                "model_size_mb": model_size_mb(model),
+            }
+        )
         mlflow.xgboost.log_model(model, name="model")
-        mlflow.set_tags({"framework": "xgboost", "author": "omar","git_commit": get_git_commit(),
-                         "data_version": get_data_version()})
-        return model , "xgboost",roc_auc , f1 , run.info.run_id
+        mlflow.set_tags(
+            {
+                "framework": "xgboost",
+                "author": "omar",
+                "git_commit": get_git_commit(),
+                "data_version": get_data_version(),
+            }
+        )
+        return model, "xgboost", roc_auc, f1, run.info.run_id
 
 
 def train_mlp(X_train, y_train, X_val, y_val):
     import torch
-    from torch import nn
-    from torch import optim
-    from sklearn.metrics import roc_auc_score, f1_score, log_loss
-    
-    ml_config.active_model="mlp"
+    from sklearn.metrics import f1_score, log_loss, roc_auc_score
+    from torch import nn, optim
+
+    ml_config.active_model = "mlp"
     params = ml_config.models[ml_config.active_model]
 
     with mlflow.start_run(run_name="mlp-baseline") as run:
@@ -166,7 +194,7 @@ def train_mlp(X_train, y_train, X_val, y_val):
             layers.append(nn.Linear(input_size, params["hidden_size"]))
             layers.append(nn.ReLU())
             layers.append(nn.Dropout(params["dropout"]))
-            input_size = params["hidden_size"]   
+            input_size = params["hidden_size"]
 
         layers.append(nn.Linear(input_size, 1))
 
@@ -191,26 +219,40 @@ def train_mlp(X_train, y_train, X_val, y_val):
                     roc_auc = roc_auc_score(y_val_t.numpy(), y_proba.numpy())
                     f1 = f1_score(y_val_t.numpy(), y_pred.numpy())
 
-                mlflow.log_metrics({
-                    "roc_auc": roc_auc,
-                    "f1": f1,
-                    "log_loss": log_loss(y_val_t.numpy(), y_proba.numpy()),
-                }, step=epoch)
+                mlflow.log_metrics(
+                    {
+                        "roc_auc": roc_auc,
+                        "f1": f1,
+                        "log_loss": log_loss(y_val_t.numpy(), y_proba.numpy()),
+                    },
+                    step=epoch,
+                )
 
         fig, ax = plt.subplots()
         ConfusionMatrixDisplay.from_predictions(y_val_t.numpy(), y_pred.numpy(), ax=ax)
         mlflow.log_figure(fig, "confusion_matrix.png")
         plt.close(fig)
 
-        mlflow.log_metrics({
-            "train_duration_sec": t["elapsed"],
-            "model_size_mb": model_size_mb(model),
-        })
+        mlflow.log_metrics(
+            {
+                "train_duration_sec": t["elapsed"],
+                "model_size_mb": model_size_mb(model),
+            }
+        )
 
-        mlflow.pytorch.log_model(model, name="model", input_example=X_train_t[:5].numpy())
-        mlflow.set_tags({"framework": "pytorch", "author": "omar","git_commit": get_git_commit(),
-                         "data_version": get_data_version()})
-        return model , "pytorch",roc_auc , f1 , run.info.run_id
+        mlflow.pytorch.log_model(
+            model, name="model", input_example=X_train_t[:5].numpy()
+        )
+        mlflow.set_tags(
+            {
+                "framework": "pytorch",
+                "author": "omar",
+                "git_commit": get_git_commit(),
+                "data_version": get_data_version(),
+            }
+        )
+        return model, "pytorch", roc_auc, f1, run.info.run_id
+
 
 if __name__ == "__main__":
     main()

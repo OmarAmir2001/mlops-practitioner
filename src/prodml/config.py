@@ -1,8 +1,10 @@
 # config.py
-from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 """ Configuration settings for the application. """
+
 
 class Settings(BaseSettings):
 
@@ -23,6 +25,7 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     return Settings()
+
 
 def apply_aws_env() -> None:
     """Push S3/MinIO credentials into os.environ for boto3 to find."""
