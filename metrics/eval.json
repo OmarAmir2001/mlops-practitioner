@@ -1,0 +1,11 @@
+{
+  "test_roc_auc": 0.8589331619537275,
+  "test_f1": 0.6071428571428571,
+  "test_log_loss": 0.3996804996545495,
+  "model_name": "churn-predictor",
+  "model_uri": "models:/churn-predictor@production",
+  "run_id": "530d02ca80a4493f998e8d9bf98bee6f",
+  "trained_at": "2026-09-04 13:55:41.992961",
+  "model_size_bytes": 96851,
+  "framework": "pytorch"
+}

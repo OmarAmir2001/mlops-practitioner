@@ -1,0 +1,44 @@
+stages:
+  prepare:
+    cmd: python pipelines/run_prepare.py
+    deps:
+      - pipelines/run_prepare.py
+      - src/prodml/data.py
+      - data/WA_Fn-UseC_-Telco-Customer-Churn.csv
+    outs:
+      - data/interim/clean.parquet
+
+  featurize:
+    cmd: python pipelines/run_featurize.py
+    deps:
+      - pipelines/run_featurize.py
+      - src/prodml/data.py
+      - data/interim/clean.parquet
+    outs:
+      - data/processed/features.pkl
+      - data/processed/test_raw.parquet
+
+  train:
+    cmd: python pipelines/run_train.py
+    deps:
+      - pipelines/run_train.py
+      - src/prodml/ml_flow/train.py
+      - src/prodml/ml_flow/sweep.py
+      - src/prodml/ml_flow/wrapper.py
+      - src/prodml/registry.py
+      - src/prodml/ml_flow/pipeline_config.yaml
+      - data/processed/features.pkl
+    metrics:
+      - metrics/train.json:
+          cache: false
+
+  evaluate:
+    cmd: python pipelines/run_evaluate.py
+    deps:
+      - pipelines/run_evaluate.py
+      - src/prodml/model.py
+      - data/processed/test_raw.parquet
+      - metrics/train.json
+    metrics:
+      - metrics/eval.json:
+          cache: false

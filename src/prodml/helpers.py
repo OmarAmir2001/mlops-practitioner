@@ -1,50 +1,20 @@
+import os
 import pickle
-from .config import get_settings
-import structlog
-import hashlib
-import json
+import tempfile
 import time
+from contextlib import contextmanager
 from functools import wraps
+
+import structlog
+import yaml
+from git import Repo
+
+from .config import get_settings
 
 """Helper functions."""
 
 settings = get_settings()
 log = structlog.get_logger(__name__)
-
-class Metadata():
-
-
-    def __init__(self, metadata_file: str = settings.METADATA_FILE) -> None:
-
-        if metadata_file is None:
-            log.error("metadata_not_found", reason="metadata_file_not_found")
-            return
-        with open(metadata_file, 'r') as f_in:
-            metadata = json.load(f_in)
-
-        self.version = metadata["version"]
-        self.trained_at = metadata["trained_at"]
-        self.framework = metadata["framework"]
-        self.artifact_hash = self.compute_file_hash()
-        log.info("metadata_loaded", path=metadata_file, version=self.version, artifact_hash=self.artifact_hash)
-
-    def get_model_version(self) -> str:
-        """Return the version of the model."""
-        return self.version
-    
-    def get_trained_at(self) -> str:
-        """Return the date and time when the model was trained."""
-        return self.trained_at
-    
-    def get_framework(self) -> str:
-        """Return the framework used to train the model."""
-        return self.framework
-
-    def compute_file_hash(self, file_path: str =settings.MODEL_FILE) -> str:
-        """Compute the SHA256 hash of a file."""
-        with open(file_path, 'rb') as f_in:
-            file_bytes = f_in.read()
-        return hashlib.sha256(file_bytes).hexdigest()
 
 
 def timed(func):
@@ -55,6 +25,38 @@ def timed(func):
         elapsed_ms = (time.perf_counter() - start) * 1000
         log.info("timed_call", function=func.__name__, elapsed_ms=round(elapsed_ms, 2))
         return result
+
     return wrapper
-    
-        
+
+
+def get_git_commit_hash() -> str:
+    """Return the current git commit hash."""
+    repo = Repo(search_parent_directories=True)
+    return repo.head.object.hexsha
+
+
+@contextmanager
+def timer():
+    """Measure elapsed seconds for a block. Access via the yielded dict after the block exits."""
+    start = time.perf_counter()
+    holder = {}
+    try:
+        yield holder
+    finally:
+        holder["elapsed"] = time.perf_counter() - start
+
+
+def model_size_mb(model) -> float:
+    """Serialized size of a model in megabytes."""
+    with tempfile.NamedTemporaryFile(suffix=".pkl") as tmp:
+        pickle.dump(model, tmp)
+        tmp.flush()
+        return os.path.getsize(tmp.name) / (1024 * 1024)
+
+
+def get_data_version(
+    dvc_file: str = "data/WA_Fn-UseC_-Telco-Customer-Churn.csv.dvc",
+) -> str:
+    """Read the DVC-tracked hash of the input dataset."""
+    with open(dvc_file) as f:
+        return yaml.safe_load(f)["outs"][0]["md5"]

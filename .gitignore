@@ -27,6 +27,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# misc\
+src/scratchbook
+mlflow.db
+
+
 # PyInstaller
 #   Usually these files are written by a python script from a template
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -217,3 +222,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+data/WA_Fn-UseC_-Telco-Customer-Churn.csv
+models

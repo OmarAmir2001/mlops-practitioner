@@ -1,5 +1,7 @@
 import structlog
+
 """Logging configuration."""
+
 
 def configure_logging() -> None:
     """Configure logging for the application."""

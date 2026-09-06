@@ -1,0 +1,106 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python pipelines/run_prepare.py
+    deps:
+    - path: data/WA_Fn-UseC_-Telco-Customer-Churn.csv
+      hash: md5
+      md5: 0f9de68e012bd3aed5fa7cdc9fc421af
+      size: 977501
+    - path: pipelines/run_prepare.py
+      hash: md5
+      md5: 23d47cd6d6bb548215559646ebc32aea
+      size: 427
+    - path: src/prodml/data.py
+      hash: md5
+      md5: 45a0b72d7e34c06a3174cfd0e8dc301e
+      size: 2409
+    outs:
+    - path: data/interim/clean.parquet
+      hash: md5
+      md5: e3639dafe245979fe4adc4dadb0e7a51
+      size: 195429
+  featurize:
+    cmd: python pipelines/run_featurize.py
+    deps:
+    - path: data/interim/clean.parquet
+      hash: md5
+      md5: e3639dafe245979fe4adc4dadb0e7a51
+      size: 195429
+    - path: pipelines/run_featurize.py
+      hash: md5
+      md5: 94ee9e0d2c7840eee7d0cb840bd36fa7
+      size: 796
+    - path: src/prodml/data.py
+      hash: md5
+      md5: 45a0b72d7e34c06a3174cfd0e8dc301e
+      size: 2409
+    outs:
+    - path: data/processed/features.pkl
+      hash: md5
+      md5: 670856d54677dffc86af3501abdf000a
+      size: 2594043
+    - path: data/processed/test_raw.parquet
+      hash: md5
+      md5: cce98d608b756567e78406cb74bf5440
+      size: 42267
+  train:
+    cmd: python pipelines/run_train.py
+    deps:
+    - path: data/processed/features.pkl
+      hash: md5
+      md5: 670856d54677dffc86af3501abdf000a
+      size: 2594043
+    - path: pipelines/run_train.py
+      hash: md5
+      md5: a89e9f667c1e1b1fc759b75654f035cf
+      size: 529
+    - path: src/prodml/ml_flow/ChurnModelWrapper.py
+      hash: md5
+      md5: 982fc9d6f65b40badeab55601bdbc010
+      size: 3612
+    - path: src/prodml/ml_flow/pipeline_config.yaml
+      hash: md5
+      md5: 44e59ced4f8774c3e4ecdd65cc031359
+      size: 710
+    - path: src/prodml/ml_flow/sweep.py
+      hash: md5
+      md5: fc0a593b366fd877869bc7a778cf6e9f
+      size: 2929
+    - path: src/prodml/ml_flow/train.py
+      hash: md5
+      md5: 6b87e3a72b19dcc173bb5c595889564e
+      size: 8061
+    - path: src/prodml/registry.py
+      hash: md5
+      md5: 0ec44c5a135baeda2175162c99667a87
+      size: 1726
+    outs:
+    - path: metrics/train.json
+      hash: md5
+      md5: ce28b5eda0f04c2f0f7a5bfefaf123d9
+      size: 170
+  evaluate:
+    cmd: python pipelines/run_evaluate.py
+    deps:
+    - path: data/processed/test_raw.parquet
+      hash: md5
+      md5: cce98d608b756567e78406cb74bf5440
+      size: 42267
+    - path: metrics/train.json
+      hash: md5
+      md5: ce28b5eda0f04c2f0f7a5bfefaf123d9
+      size: 170
+    - path: pipelines/run_evaluate.py
+      hash: md5
+      md5: 099b8dd2c7496ee647e9b87c1794bce7
+      size: 1204
+    - path: src/prodml/model.py
+      hash: md5
+      md5: 42ad71c36b2b224bd7c07dfcbdcfb469
+      size: 2057
+    outs:
+    - path: metrics/eval.json
+      hash: md5
+      md5: 41ce6cf427a63bb9f52b9fb11265e0ab
+      size: 349
