@@ -23,3 +23,30 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run ruff check src pipelines tests
       - run: uv run black --check src pipelines tests
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_NAME: prodml
+      APP_VERSION: 0.1.0
+      DATA_PATH: tests/fixtures/sample.csv
+      MLFLOW_TRACKING_URI: http://localhost:5000
+      ML_CONFIG_PATH: src/prodml/ml_flow/pipeline_config.yaml
+      MODEL_NAME: churn-predictor
+      CHURN_THRESHOLD: '0.5'
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      MLFLOW_S3_ENDPOINT_URL: http://localhost:9000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra dev
+      - run: uv run pytest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: htmlcov/
+          retention-days: 7
