@@ -69,6 +69,7 @@ The API needs a model carrying the `production` alias before it will start. On a
 
 ```bash
 uv sync --extra dev
+uv tool install "dvc[s3]"
 uv run dvc repro
 ```
 
@@ -111,7 +112,7 @@ curl -X POST http://localhost:8000/predict \
 
 Swagger UI at `http://localhost:8000/docs`.
 
-`/metadata` is worth calling — it reports the *actual* model behind the alias, so you can confirm which version is live:
+`/metadata` reports the *actual* model behind the alias, so you can confirm which version is live:
 
 ```json
 {
@@ -135,7 +136,7 @@ python -m prodml.ml_flow.train      # training only, standalone
 
 Each run produces 14 MLflow runs: three baselines, an Optuna sweep parent, and ten nested trials. Every run records params, `roc_auc` / `f1` / `log_loss`, training duration, model size, a confusion matrix, feature importance (XGBoost), and tags for `framework`, `git_commit`, and `data_version`.
 
-The champion is wrapped in a custom `mlflow.pyfunc.PythonModel` that bundles the `DictVectorizer`, the `StandardScaler`, the model, and a `metadata.json` recording which framework it is. A factory dispatches to the right loader and adapter at load time, so `predict()` contains no framework-specific branching.
+The champion is wrapped in a custom `mlflow.pyfunc.PythonModel` that bundles the `DictVectorizer`, the `StandardScaler`, the model, and a `metadata.json` recording which framework it is. A factory dispatches to the right loader and adapter at load time, so `predict()` contains no framework-specific branching — adding a new backend means adding one adapter and changing nothing else.
 
 ### Promotion
 
@@ -197,6 +198,8 @@ Two workflows, deliberately separate:
 
 The split is not stylistic. GitHub-hosted runners cannot reach `localhost:5000`, and an ephemeral MLflow started inside CI has an empty registry — so the quality gate would find no baseline and pass unconditionally. A self-hosted runner on the development machine gives CI access to the real registry with its full history.
 
+The tradeoffs are real: state leaks between runs, jobs queue until the machine is on, and a public repository with a self-hosted runner is a security risk — mitigated by requiring approval for all outside collaborators and scoping the self-hosted job to internal branches.
+
 In production this problem does not arise, because nothing lives on localhost: MLflow runs on a server, artifacts in S3, metadata in managed Postgres. Production CI also does not train — that belongs in a separate pipeline with the time and hardware for it, gating against a shared persistent registry.
 
 ---
@@ -215,14 +218,11 @@ mlops-practitioner/
 │   ├── Dockerfile                 # multi-stage, non-root
 │   ├── mlflow.Dockerfile          # mlflow + psycopg2 + boto3
 │   └── docker-compose.yml         # api, mlflow, postgres, minio, create-bucket
-├── infra/                         # Terraform, Docker provider
 ├── pipelines/                     # thin DVC stage entry points
 │   ├── run_prepare.py
 │   ├── run_featurize.py
 │   ├── run_train.py
 │   └── run_evaluate.py
-├── scripts/
-│   └── check_model_quality.py     # the CI quality gate
 ├── metrics/                       # train.json, eval.json (committed, cache: false)
 ├── reports/module-2.md
 ├── src/prodml/
@@ -286,6 +286,8 @@ All settings come from `.env`, validated by `pydantic-settings`. Nothing has a d
 | Logistic Regression | 0.8575 | **0.6298** | **0.4134** | **0.089** | **0.0010** |
 | Swept XGBoost | 0.8546 | 0.5641 | — | 0.98 | 0.224 |
 | XGBoost baseline | 0.8417 | 0.5763 | 0.4306 | 11.79 | 0.645 |
+
+Held-out test set: `roc_auc 0.8589`, `f1 0.6071`, `log_loss 0.3997`.
 
 Three of the four land within 0.004 `roc_auc` of each other. That convergence suggests the ceiling here is set by the features rather than the model class — and it means promotion decisions are being made on differences smaller than run-to-run variance, a limitation documented in `reports/module-2.md`.
 
