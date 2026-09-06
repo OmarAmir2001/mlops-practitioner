@@ -13,7 +13,6 @@ FROM python:3.14-slim AS runtime
 RUN useradd --create-home --uid 1000 appuser
 
 COPY --from=builder /install /usr/local
-COPY --chown=appuser:appuser models/ /app/models/
 COPY --chown=appuser:appuser src/ /app/src/
 
 WORKDIR /app

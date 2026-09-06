@@ -1,0 +1,43 @@
+name: Train
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-and-gate:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Put uv and dvc on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Copy .env into the workspace
+        run: cp ~/projects/mlops-practitioner/.env .
+
+      - name: Check the stack is reachable
+        run: |
+          curl -sf http://localhost:5000/health || { echo "MLflow not running"; exit 1; }
+          curl -sf http://localhost:9000/minio/health/live || { echo "MinIO not running"; exit 1; }
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Pull data
+        run: dvc pull
+
+      - name: Run the pipeline
+        run: uv run dvc repro
+
+      - name: Quality gate
+        run: uv run python scripts/check_model_quality.py
+
+      - name: Report metrics
+        if: always()
+        run: |
+          echo "### Metrics" >> "$GITHUB_STEP_SUMMARY"
+          dvc metrics show --md >> "$GITHUB_STEP_SUMMARY"
