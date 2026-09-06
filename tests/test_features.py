@@ -1,4 +1,7 @@
 # tests/test_features.py
+from conftest import requires_mlflow
+
+pytestmark = requires_mlflow
 def test_customer_schema_produces_correct_feature_count(real_dv):
     from prodml.data_schema import Customer
 
