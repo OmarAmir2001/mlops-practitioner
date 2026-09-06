@@ -5,7 +5,8 @@ WORKDIR /build
 COPY pyproject.toml ./
 COPY src/ ./src/
 
-RUN pip install --no-cache-dir --prefix=/install .
+RUN pip install --no-cache-dir --prefix=/install \
+    --extra-index-url https://download.pytorch.org/whl/cpu .
 
 # Runtime stage
 FROM python:3.14-slim AS runtime
