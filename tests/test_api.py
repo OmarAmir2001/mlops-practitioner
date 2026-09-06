@@ -2,6 +2,7 @@ from conftest import requires_mlflow
 
 pytestmark = requires_mlflow
 
+
 def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
