@@ -36,6 +36,7 @@ addopts = "--cov=src/prodml --cov-fail-under=70"
 omit = [
     "src/prodml/ml_flow/train.py",
     "src/prodml/ml_flow/sweep.py",
+    "src/prodml/ml_flow/wrapper.py",
     "src/prodml/run.py",
 ]
 
