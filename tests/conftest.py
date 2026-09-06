@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
+import socket
+import pytest
 
 from prodml.api.main import app
 from prodml.model import ChurnPredictor
@@ -110,3 +112,18 @@ def raw_csv(tmp_path):
         }
     ).to_csv(path, index=False)
     return str(path)
+
+
+
+def _mlflow_reachable(host="localhost", port=5000, timeout=1.0) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+requires_mlflow = pytest.mark.skipif(
+    not _mlflow_reachable(),
+    reason="MLflow is not reachable; skipping tests that load the registered model",
+)
