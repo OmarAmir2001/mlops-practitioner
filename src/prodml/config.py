@@ -33,4 +33,3 @@ def apply_aws_env() -> None:
     os.environ["AWS_ACCESS_KEY_ID"] = s.AWS_ACCESS_KEY_ID
     os.environ["AWS_SECRET_ACCESS_KEY"] = s.AWS_SECRET_ACCESS_KEY
     os.environ["MLFLOW_S3_ENDPOINT_URL"] = s.MLFLOW_S3_ENDPOINT_URL
-x=1
