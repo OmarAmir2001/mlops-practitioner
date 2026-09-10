@@ -51,7 +51,7 @@ def run_training(bundle):
     )
 
     with mlflow.start_run(run_id=run_id):
-        log_wrapped_model(model, framework, dv, scaler)
+        log_wrapped_model(model, framework, dv, scaler, to_onnx=True)
 
     promoted = promote_if_better(run_id)
     log.info(

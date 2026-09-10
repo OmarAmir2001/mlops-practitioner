@@ -21,10 +21,22 @@ dependencies = [
     "torch",
     "optuna",
     "matplotlib",
+    "onnx>=1.22.0",
+    "onnxruntime>=1.30.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "ruff", "black", "mypy", "httpx", "pre-commit"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "black",
+    "mypy",
+    "httpx2",
+    "pre-commit",
+    "skl2onnx>=1.20.0",
+    "onnxmltools>=1.16.0",
+]
 
 [project.scripts]
 prodml-serve = "prodml.run:main"
