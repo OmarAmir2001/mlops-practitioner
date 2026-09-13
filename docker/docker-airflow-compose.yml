@@ -1,0 +1,184 @@
+x-airflow-common: &airflow-common
+  build:
+    context: ..
+    dockerfile: docker/airflow.Dockerfile
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+    # Project settings — service names, NOT localhost, because these run
+    # inside the Docker network.
+    APP_NAME: prodml
+    APP_VERSION: 0.1.0
+    MODEL_NAME: churn-predictor
+    CHURN_THRESHOLD: "0.5"
+    DATA_PATH: /opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv
+    ML_CONFIG_PATH: /opt/prodml/src/prodml/ml_flow/pipeline_config.yaml
+    MLFLOW_TRACKING_URI: http://mlflow:5000
+    MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    AWS_ACCESS_KEY_ID: minioadmin
+    AWS_SECRET_ACCESS_KEY: minioadmin
+  volumes:
+    - ../pipelines/dags:/opt/airflow/dags
+    - ../pipelines/logs:/opt/airflow/logs
+    - ../pipelines/plugins:/opt/airflow/plugins
+    - ../data:/opt/airflow/data
+  user: "50000:0"
+  depends_on: &airflow-common-depends-on
+    airflow-postgres:
+      condition: service_healthy
+
+services:
+  # ─────────────────────────── serving ───────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+
+  # ─────────────────────────── mlflow ────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      retries: 10
+
+  create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (mc alias set local http://minio:9000 minioadmin minioadmin) do sleep 1; done;
+      mc mb -p local/mlflow-artifacts;
+      exit 0;"
+
+  mlflow:
+    build:
+      context: ..
+      dockerfile: docker/mlflow.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      create-bucket:
+        condition: service_completed_successfully
+    ports:
+      - "5000:5000"
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --default-artifact-root s3://mlflow-artifacts/
+      --host 0.0.0.0 --port 5000
+
+  # ─────────────────────────── airflow ───────────────────────────
+  airflow-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      retries: 10
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow connections add fs_default \
+          --conn-type fs \
+          --conn-extra '{"path": "/"}' || true
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  minio-data:
+  airflow-postgres-data:
